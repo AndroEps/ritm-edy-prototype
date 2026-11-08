@@ -2,6 +2,11 @@
    Подключается после style.css. Базовые токены контраста (--ink, --bg, --surface, --primary…) не меняются по смыслу.
    Движение: только transform и opacity (кроме коротких одноразовых эффектов); всё отключается при prefers-reduced-motion. */
 
+/* Встроенный узкий шрифт: Roboto Condensed (SIL OFL 1.1, fonts/OFL.txt), вариативный 400–700, кириллица и латиница.
+   На Windows первым остаётся системный Bahnschrift (одобренный заказчиком вид), на остальных устройствах — встроенный. */
+@font-face { font-family: "Ritm Condensed"; font-style: normal; font-weight: 400 700; font-display: swap; src: url(fonts/roboto-condensed-cyrillic.woff2) format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: "Ritm Condensed"; font-style: normal; font-weight: 400 700; font-display: swap; src: url(fonts/roboto-condensed-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
 :root {
   /* Акценты: каждый закреплён за смыслом, а не просто «для красоты». */
   --c-veg: #13a47a;      /* овощи, привычки */
@@ -19,7 +24,7 @@
   --aurora-1: rgb(25 169 145 / 0.20);
   --aurora-2: rgb(47 143 224 / 0.16);
   --aurora-3: rgb(242 163 58 / 0.16);
-  --font-ui: "Bahnschrift", "Roboto Condensed", "sans-serif-condensed", "Avenir Next Condensed", "Arial Narrow", "Segoe UI", system-ui, sans-serif;
+  --font-ui: "Bahnschrift", "Ritm Condensed", "Roboto Condensed", "sans-serif-condensed", "Segoe UI", system-ui, sans-serif;
   --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -149,22 +154,40 @@ body::before {
 @keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .chart .line { stroke: url(#lineGrad); stroke-width: 3; }
 
-/* ---------- Макет тела ---------- */
-.body-card { border-radius: var(--radius-lg); padding: 16px; display: grid; grid-template-columns: minmax(110px, 150px) minmax(0, 1fr); gap: 14px; align-items: center; }
-.body-svg { width: 100%; height: auto; display: block; }
-.body-svg .silhouette { fill: color-mix(in srgb, var(--accent) 12%, var(--surface)); stroke: color-mix(in srgb, var(--accent) 45%, transparent); stroke-width: 1.4; }
-.body-svg .ring { fill: none; stroke: var(--c-move); stroke-width: 2; stroke-dasharray: 1; transform-box: fill-box; }
-.body-svg .ring.none { stroke: var(--line-strong); stroke-dasharray: 0.04 0.04; }
-.body-svg .scan { fill: url(#scanGrad); }
-.view.enter .body-svg .ring:not(.none) { animation: draw 900ms var(--ease-out) both; animation-delay: calc(500ms + var(--i, 0) * 140ms); }
-.view.enter .body-svg .scan { animation: scan-sweep 1800ms var(--ease-in-out) both 200ms; }
-@keyframes scan-sweep { 0% { transform: translateY(-40px); opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translateY(330px); opacity: 0; } }
-.body-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.body-legend li { display: grid; gap: 0; border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
-.body-legend li:last-child { border-bottom: 0; }
-.body-legend b { font-variant-numeric: tabular-nums; font-stretch: 78%; font-size: 1.15rem; }
-.body-legend .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c-move); display: inline-block; margin-right: 6px; }
-.body-legend .dot.none { background: var(--line-strong); }
+/* ---------- Макет тела: манекен на подиуме с выносками ---------- */
+.body-card { border-radius: var(--radius-lg); padding: 10px 8px 4px; position: relative; overflow: hidden;
+  background: radial-gradient(120% 80% at 50% 40%, color-mix(in srgb, var(--c-veg) 12%, var(--glass)), var(--glass)); }
+.body-svg { width: 100%; max-width: 420px; height: auto; display: block; margin: 0 auto; overflow: visible; }
+.body-svg .grid circle { fill: none; stroke: var(--accent); stroke-opacity: 0.12; stroke-dasharray: 2 6; }
+.body-svg .podium-ring { fill: none; stroke: var(--c-veg); stroke-opacity: 0.45; stroke-width: 1.2; }
+.body-svg .figure { filter: drop-shadow(0 10px 18px rgb(19 164 122 / 0.28)); }
+.body-svg .shine { fill: #fff; opacity: 0.16; transform: skewX(-12deg); }
+.body-svg .scan { fill: url(#scanGrad); opacity: 0; }
+.body-svg .band { fill: none; stroke: #fff; stroke-width: 1.6; stroke-opacity: 0.85; stroke-dasharray: 1; }
+.body-svg .callout.none .band { stroke-opacity: 0.35; stroke-dasharray: 0.03 0.03; }
+.body-svg .lead { fill: none; stroke: var(--c-move); stroke-width: 1.4; stroke-dasharray: 1; }
+.body-svg .pin { fill: var(--c-move); stroke: #fff; stroke-width: 2; }
+.body-svg .pulse { fill: none; stroke: var(--c-move); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: pin-pulse 2.4s var(--ease-out) infinite; animation-delay: calc(var(--i) * 300ms); }
+.body-svg .callout.none .lead, .body-svg .callout.none .pin, .body-svg .callout.none .pulse { stroke: var(--line-strong); }
+.body-svg .callout.none .pin { fill: var(--line-strong); }
+.body-svg .callout.none .pulse { animation: none; opacity: 0; }
+.body-svg .lbl { font-size: 10px; letter-spacing: 0.12em; fill: var(--ink-2); font-weight: 600; }
+.body-svg .val { font-size: 19px; font-weight: 700; fill: var(--ink); font-variant-numeric: tabular-nums; font-stretch: 80%; }
+.body-svg .callout.none .val { fill: var(--ink-2); }
+@keyframes pin-pulse { 0% { transform: scale(1); opacity: 0.9; } 70%, 100% { transform: scale(3.2); opacity: 0; } }
+.view.enter .body-svg .figure { animation: fig-in 800ms var(--ease-out) both 120ms; }
+@keyframes fig-in { from { opacity: 0; transform: translateY(18px) scale(0.96); } to { opacity: 1; transform: none; } }
+.body-svg .figure { transform-box: fill-box; transform-origin: bottom center; }
+.view.enter .body-svg .podium, .view.enter .body-svg .podium-ring { animation: fade-in 700ms ease both; }
+.view.enter .body-svg .scan { animation: scan-sweep 1600ms var(--ease-in-out) both 500ms; }
+.body-svg .shine { animation: body-shine 5s var(--ease-in-out) infinite 1.5s; }
+@keyframes body-shine { 0%, 60% { transform: translateX(-80px) skewX(-12deg); } 100% { transform: translateX(160px) skewX(-12deg); } }
+@keyframes scan-sweep { 0% { transform: translateY(-40px); opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translateY(300px); opacity: 0; } }
+.view.enter .body-svg .band { animation: draw 700ms var(--ease-out) both; animation-delay: calc(700ms + var(--i) * 150ms); }
+.view.enter .body-svg .lead { animation: draw 600ms var(--ease-out) both; animation-delay: calc(850ms + var(--i) * 150ms); }
+.view.enter .body-svg .pin { transform-box: fill-box; transform-origin: center; animation: pt-in 500ms var(--ease-spring) both; animation-delay: calc(750ms + var(--i) * 150ms); }
+.view.enter .body-svg .callout text { animation: fade-up 500ms var(--ease-out) both; animation-delay: calc(1100ms + var(--i) * 150ms); }
+@media (prefers-reduced-motion: reduce) { .body-svg .pulse, .body-svg .shine, .body-svg .scan, .view.enter .body-svg * { animation: none !important; } }
 
 /* ---------- Отметки: всплеск ---------- */
 .burst { position: fixed; z-index: 40; width: 0; height: 0; pointer-events: none; }

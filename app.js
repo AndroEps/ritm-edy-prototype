@@ -852,18 +852,44 @@
     return days.map(d => ({ d, v: E.median7(entries, d) }));
   }
 
-  // Макет тела: силуэт и кольца замеров. Значения — только ваши записи; без «идеальной фигуры» и сравнений.
-  const BODY_RINGS = [['Грудь', 60, 92, 27, 6], ['Талия', 60, 128, 24, 5], ['Бёдра', 60, 158, 28, 6], ['Плечо', 29, 100, 7, 3]];
+  // Макет тела: объёмный манекен на подиуме, полосы замеров и выноски со значениями.
+  // Значения — только ваши записи (примеры в демо подписаны); без «идеальной фигуры» и сравнений.
+  // [название, точка на теле x,y, сторона выноски, y подписи, полуширина полосы (0 — без полосы)]
+  const BODY_POINTS = [['Грудь', 150, 92, 'r', 80, 37], ['Плечо', 103, 112, 'l', 98, 0], ['Талия', 150, 134, 'l', 150, 31], ['Бёдра', 150, 164, 'r', 180, 38]];
   function bodyCard() {
     const latest = k => [...state.measures].filter(m => m.kind === k).sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created)[0];
+    const label = BODY_POINTS.map(([k]) => { const m = latest(k); return `${k}: ${m ? num(m.cm) + ' см' : 'нет замера'}`; }).join(', ');
+    const callouts = BODY_POINTS.map(([k, x, y, side, ly, band], i) => {
+      const m = latest(k), r = side === 'r', ex = r ? 236 : 64, tx = r ? 240 : 60, anchor = r ? 'start' : 'end';
+      return `<g class="callout ${m ? '' : 'none'}" style="--i:${i}">
+        ${band ? `<ellipse class="band" pathLength="1" cx="150" cy="${y}" rx="${band}" ry="7"/>` : ''}
+        <path class="lead" pathLength="1" d="M${x} ${y} L${r ? x + 40 : x - 22} ${ly} L${ex} ${ly}"/>
+        <circle class="pulse" cx="${x}" cy="${y}" r="5"/><circle class="pin" cx="${x}" cy="${y}" r="4"/>
+        <text class="lbl" x="${tx}" y="${ly - 6}" text-anchor="${anchor}">${k.toUpperCase()}</text>
+        <text class="val" x="${tx}" y="${ly + 14}" text-anchor="${anchor}">${m ? `${num(m.cm)} см` : '—'}</text>
+        ${m && m.demo ? `<text class="lbl" x="${tx}" y="${ly + 28}" text-anchor="${anchor}">пример</text>` : ''}</g>`;
+    }).join('');
     return `<section class="section" aria-labelledby="body-h"><h2 class="h2" id="body-h" style="margin-bottom:8px">Тело</h2><div class="body-card">
-      <svg class="body-svg" viewBox="0 0 120 300" role="img" aria-label="Схема тела с местами замеров"><defs><linearGradient id="scanGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#13a47a" stop-opacity="0"/><stop offset="1" stop-color="#13a47a" stop-opacity="0.45"/></linearGradient></defs>
-        <ellipse id="silHead" class="silhouette" cx="60" cy="23" rx="14" ry="17"/>
-        <path id="silBody" class="silhouette" d="M54 39L66 39L67 49C80 50 90 53 92 62C96 80 100 120 103 160C104 168 100 172 97 168C94 140 90 110 86 84C86 100 84 118 83 128C86 142 88 152 87 164C86 200 82 250 80 284C82 292 70 293 68 287C68 250 66 205 61 176L59 176C54 205 52 250 52 287C50 293 38 292 40 284C38 250 34 200 33 164C32 152 34 142 37 128C36 118 34 100 34 84C30 110 26 140 23 168C20 172 16 168 17 160C20 120 24 80 28 62C30 53 40 50 53 49Z"/>
-        ${BODY_RINGS.map(([k, cx, cy, rx, ry], i) => `<ellipse class="ring ${latest(k) ? '' : 'none'}" style="--i:${i}" pathLength="1" cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"/>`).join('')}
-        <clipPath id="bodyClip"><use href="#silHead"/><use href="#silBody"/></clipPath><g clip-path="url(#bodyClip)"><rect class="scan" x="0" y="0" width="120" height="40"/></g></svg>
-      <ul class="body-legend">${BODY_RINGS.map(([k]) => { const m = latest(k); return `<li><span><i class="dot ${m ? '' : 'none'}"></i>${k}</span>${m ? `<b>${num(m.cm)} см${demoTag(m)}</b>` : '<span class="small muted">нет замера</span>'}</li>`; }).join('')}</ul>
-    </div><p class="tiny muted" style="margin-top:6px">Схема показывает, где сделан замер. Добавить — в разделе «Замеры» ниже.</p></section>`;
+      <svg class="body-svg" viewBox="0 0 300 330" role="img" aria-label="Схема тела. ${esc(label)}">
+        <defs>
+          <linearGradient id="bodyGrad" gradientUnits="userSpaceOnUse" x1="150" y1="10" x2="150" y2="320"><stop offset="0" stop-color="#3fe0c0"/><stop offset=".55" stop-color="#19a991"/><stop offset="1" stop-color="#2f8fe0"/></linearGradient>
+          <radialGradient id="podGrad"><stop offset="0" stop-color="#3fe0c0" stop-opacity=".55"/><stop offset="1" stop-color="#3fe0c0" stop-opacity="0"/></radialGradient>
+          <linearGradient id="scanGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".7"/></linearGradient>
+          <g id="fig" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="150" cy="34" r="19" stroke-width="0"/><rect x="142" y="50" width="16" height="16" rx="7" stroke-width="0"/>
+            <path stroke-width="0" d="M116 66Q150 58 184 66Q195 70 192 86L183 130Q180 140 184 150L188 170Q150 184 112 170L116 150Q120 140 117 130L108 86Q105 70 116 66Z"/>
+            <path fill="none" stroke-width="17" d="M113 78L101 140L95 196"/><path fill="none" stroke-width="17" d="M187 78L199 140L205 196"/>
+            <path fill="none" stroke-width="25" d="M135 170L131 238L129 296"/><path fill="none" stroke-width="25" d="M165 170L169 238L171 296"/>
+          </g>
+          <mask id="figMask"><use href="#fig" fill="#fff" stroke="#fff"/></mask>
+        </defs>
+        <g class="grid" aria-hidden="true">${[60, 100, 140].map(r => `<circle cx="150" cy="170" r="${r}"/>`).join('')}</g>
+        <ellipse class="podium" cx="150" cy="306" rx="78" ry="13" fill="url(#podGrad)"/><ellipse class="podium-ring" cx="150" cy="306" rx="60" ry="8"/>
+        <g class="figure"><use href="#fig" fill="url(#bodyGrad)" stroke="url(#bodyGrad)"/>
+          <g mask="url(#figMask)"><rect class="shine" x="90" y="0" width="40" height="330"/><rect class="scan" x="60" y="0" width="180" height="46"/></g></g>
+        ${callouts}
+      </svg></div>
+      <p class="tiny muted" style="margin-top:6px">Выноски показывают последние замеры. Добавить — в разделе «Замеры» ниже.</p></section>`;
   }
   screens.progress = () => {
     if (!showNumbers()) return { title: 'Прогресс', main: `${pageHead('Прогресс', 'Прогресс')}<p class="lead">Режим без цифр скрывает вес, оценки и графики на всех экранах.</p><a class="btn btn-secondary" href="#settings">Настройки цифр</a>
@@ -941,7 +967,7 @@
         <path d="M32 4l22 8v17c0 15-9 25-22 31C19 54 10 44 10 29V12z" fill="url(#sealGrad)"/><path d="M28 20h8v8h8v8h-8v8h-8v-8h-8v-8h8z" fill="#fff"/></svg>
       <p class="brand-line" id="cr-h">Ритм еды</p>
       <p style="margin:0;font-weight:600">Создано под наблюдением врача</p>
-      <dl><div><dt>Медицинское сопровождение</dt><dd>Врач Авагян Шакро Норикович</dd></div>
+      <dl><div><dt>Медицинское сопровождение</dt><dd>Врач Авакян Шакро Норикович</dd></div>
         <div><dt>Создатель</dt><dd>Малхасян Андраник Мартунович</dd></div></dl>
       <div class="fact"><span>47 положений методики</span><span>6 групп правил оценки</span><span>Безопасный режим для групп риска</span></div>
       <p class="tiny muted" style="margin:4px 0 0;max-width:42ch">Приложение не ставит диагнозов и не заменяет очную консультацию врача. Рекомендации общие, без лечебных обещаний и гарантий похудения.</p>
@@ -1109,7 +1135,7 @@
       <p><b>Работает в этой вкладке:</b> онбординг и ограниченный режим, дневник с поиском, избранным, повтором, копированием и отменой удаления, сборка с правилами, сценарии первого приёма, перекуса и ресторана, план с идеями и списком покупок, привычки, таймер с вашим подтверждением, вода, вес и замеры, темы, режим без цифр, экспорт файлом.</p>
       <p><b>Не подключено:</b> аккаунт, синхронизация, уведомления, Health и шаги, фото и голосовой ИИ, штрихкод, базы продуктов, оплата, аналитика. Сетевых запросов нет.</p>
       <p><b>Данные:</b> продукты и идеи — примеры прототипа; калории в них неизвестны. Всё пропадает после перезагрузки.</p>
-      <p class="small muted">Создатель — Малхасян Андраник Мартунович. Медицинское сопровождение — врач Авагян Шакро Норикович.</p>
+      <p class="small muted">Создатель — Малхасян Андраник Мартунович. Медицинское сопровождение — врач Авакян Шакро Норикович.</p>
       <div class="dialog-actions"><button class="btn btn-secondary" type="button" data-review-open>Служебное меню экранов</button><button class="btn btn-primary" type="button" data-act="close">Понятно</button></div>`),
     close: () => closeDialog(),
     skip: (a, el, e) => { e.preventDefault(); $('main').focus(); },
