@@ -67,6 +67,16 @@
     scale: '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9a4 4 0 0 1 6 0l-2 3"/>',
     leaf: '<path d="M5 19c0-8 5-13 14-14 0 9-5 14-14 14z"/><path d="M5 19l8-8"/>',
     shield: '<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/>',
+    camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+    barcode: '<path d="M4 6v12M7 6v12M10 6v12M14 6v12M16 6v12M20 6v12"/>',
+    mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
+    sync: '<path d="M20 11a8 8 0 0 0-14-4.5L4 9M4 4v5h5"/><path d="M4 13a8 8 0 0 0 14 4.5L20 15M20 20v-5h-5"/>',
+    bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+    heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+    spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
+    body: '<circle cx="12" cy="5" r="2.5"/><path d="M8 9h8l-1 6h-2l-.5 6h-1L11 15H9z"/>',
+    dots: '<circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>',
+    search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
     cart: '<path d="M4 5h2l2 10h10l2-7H7"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/>'
   };
   const ico = (name, cls = 'ico') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${P[name]}</svg>`;
@@ -169,10 +179,10 @@
     ['breakfast', 'Первый приём'], ['snack', 'Перекус'], ['restaurant', 'Ресторан'],
     ['plan', 'План: неделя'], ['plan/ideas', 'План: идеи блюд'], ['idea/chicken-broccoli', 'Идея блюда'],
     ['plan/shopping', 'План: покупки'], ['plan/habits', 'План: привычки'],
-    ['move', 'Таймер движения'], ['progress', 'Прогресс'], ['method', 'Как это работает'], ['settings', 'Настройки'], ['plus', 'Ритм Плюс (пример)']
+    ['move', 'Таймер движения'], ['scan', 'Фото еды · ИИ (скоро)'], ['progress', 'Прогресс'], ['method', 'Как это работает'], ['settings', 'Настройки'], ['plus', 'Ритм Плюс (пример)']
   ];
   const MAIN_NAV = [['today', 'Сегодня', 'today'], ['diary', 'Дневник', 'diary'], ['plan', 'План', 'plan'], ['progress', 'Прогресс', 'progress']];
-  const SECTION = { today: 'today', move: 'today', diary: 'diary', meal: 'diary', add: 'diary', breakfast: 'diary', snack: 'diary', restaurant: 'diary', plan: 'plan', idea: 'plan', progress: 'progress', method: 'method', settings: 'settings', plus: 'plus' };
+  const SECTION = { today: 'today', move: 'today', diary: 'diary', meal: 'diary', add: 'diary', breakfast: 'diary', snack: 'diary', restaurant: 'diary', scan: 'diary', plan: 'plan', idea: 'plan', progress: 'progress', method: 'method', settings: 'settings', plus: 'plus' };
 
   function parseHash() {
     let h;
@@ -242,6 +252,8 @@
       if (el) el.focus({ preventScroll: true });
     }
     if (flipBefore) playFlip(flipBefore, opts.appear);
+    // Слой анимаций (motion.js) получает сигнал после каждой отрисовки.
+    window.dispatchEvent(new CustomEvent('ritm:render', { detail: { route: state.route, routeChange: !!opts.routeChange } }));
   }
 
   /* FLIP: перестановка компонентов показывает, куда переместилась строка. */
@@ -265,6 +277,24 @@
   /* ---------- Общие куски ---------- */
   const pageHead = (eyebrow, title, lead) => `${eyebrow ? `<p class="eyebrow">${eyebrow}</p>` : ''}<h1 class="h1">${title}</h1>${lead ? `<p class="lead">${lead}</p>` : ''}`;
   const backLink = (href, label) => `<a class="btn btn-ghost btn-sm" href="#${href}" style="margin:-6px 0 8px -10px">${ico('left')}${label}</a>`;
+  // Мини-герой «Ритмик»: тарелка-персонаж с листиком. Используется в онбординге и в знакомстве (guide.js).
+  let heroSeq = 0;
+  function heroSvg(cls = 'hero', wave = true) {
+    const id = 'heroGrad' + (++heroSeq);
+    return `<svg class="${cls}" viewBox="0 0 100 114" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1fb89b"/><stop offset="1" stop-color="#0b6e72"/></linearGradient></defs>
+      <g class="whole"><path d="M50 26V18" stroke="#0b6e72" stroke-width="2.5" stroke-linecap="round"/><path class="leaf" d="M50 19C50 10 57 4 67 4c-1 9-7 15-17 15z"/>
+      <ellipse class="arm ${wave ? 'wave' : ''}" cx="13" cy="60" rx="7" ry="11" transform="rotate(-25 13 60)"/><ellipse class="arm" cx="87" cy="70" rx="7" ry="11" transform="rotate(20 87 70)"/>
+      <ellipse cx="40" cy="106" rx="9" ry="5" fill="#0b6e72"/><ellipse cx="60" cy="106" rx="9" ry="5" fill="#0b6e72"/>
+      <circle class="body" cx="50" cy="64" r="40" style="fill:url(#${id})"/><circle class="rim" cx="50" cy="64" r="31"/>
+      <ellipse class="eye" cx="40" cy="58" rx="4.2" ry="5.6"/><ellipse class="eye" cx="60" cy="58" rx="4.2" ry="5.6"/>
+      <circle cx="41.5" cy="56" r="1.4" fill="#fff"/><circle cx="61.5" cy="56" r="1.4" fill="#fff"/>
+      <ellipse class="cheek" cx="32" cy="68" rx="5" ry="3"/><ellipse class="cheek" cx="68" cy="68" rx="5" ry="3"/>
+      <path d="M42 70q8 8 16 0" fill="none" stroke="#10233a" stroke-width="3" stroke-linecap="round"/></g></svg>`;
+  }
+  // Раскрытые блоки остаются раскрытыми после перерисовки (иначе «Замеры» сворачивались бы после каждого ввода).
+  const openKeep = new Set();
+  const keepOpen = k => openKeep.has(k) ? 'open' : '';
+  document.addEventListener('toggle', e => { const k = e.target.dataset && e.target.dataset.keep; if (k) e.target.open ? openKeep.add(k) : openKeep.delete(k); }, true);
   const demoTag = x => x && x.demo ? ' <span class="example-tag">пример</span>' : '';
   const limitedNote = () => limited() ? `<p class="note safety">${ico('shield')} Ограниченный режим: без оценок, целей и активных советов по еде и нагрузке. Вопросы о питании обсудите с врачом.</p>` : '';
 
@@ -284,20 +314,23 @@
   function mealRow(m, opts = {}) {
     const ev = evalMeal(m);
     const status = m.status === 'planned' ? '<span class="tag amber">собрано до еды</span>' : '';
-    const score = showScore() ? `<div class="score-line">${pips(ev)}<span>${esc(ev.summary)}</span></div><a class="btn btn-ghost btn-sm" href="#meal/${m.id}">Почему такая оценка?</a>` : '';
+    // Строка приёма: нажатие открывает разбор; редкие действия — в меню «⋯».
+    const score = showScore() ? `<div class="score-line">${pips(ev)}<span>${esc(ev.summary)}</span></div>` : '';
     return `<li data-flip="m-${m.id}"><div class="meal">
       <div class="meal-icon">${ico(TYPE_ICON[m.type] || 'plate')}</div>
       <div class="grow">
-        <div class="meal-title">${typeLabel(m.type)}${status}${demoTag(m)}${opts.showDate ? `<span class="tag">${esc(relDay(m.date))}</span>` : ''}</div>
-        <p class="meal-items">${m.items.map(itemText).join(' → ')}</p>
-        ${score}
-        <div class="meal-actions">
-          ${m.status === 'planned' ? `<button class="btn btn-accent btn-sm" type="button" data-act="eaten" data-arg="${m.id}">${ico('check')}Отметить, что съели</button>` : ''}
-          <button class="btn btn-ghost btn-sm" type="button" data-act="edit-meal" data-arg="${m.id}" aria-label="Изменить: ${typeLabel(m.type)}">${ico('edit')}Изменить</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-act="copy-meal" data-arg="${m.id}" aria-label="Копировать: ${typeLabel(m.type)}">${ico('copy')}Копировать</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-act="delete-meal" data-arg="${m.id}" aria-label="Удалить: ${typeLabel(m.type)}">${ico('trash')}Удалить</button>
-        </div>
-      </div></div></li>`;
+        <a class="meal-link" href="#meal/${m.id}" aria-label="${typeLabel(m.type)}: открыть запись и разбор">
+          <div class="meal-title">${typeLabel(m.type)}${status}${demoTag(m)}${opts.showDate ? `<span class="tag">${esc(relDay(m.date))}</span>` : ''}</div>
+          <p class="meal-items">${m.items.map(itemText).join(' → ')}</p>
+          ${score}
+        </a>
+        <div class="meal-actions">${m.status === 'planned' ? `<button class="btn btn-accent btn-sm" type="button" data-act="eaten" data-arg="${m.id}">${ico('check')}Отметить, что съели</button>` : ''}</div>
+      </div>
+      <details class="more"><summary aria-label="Действия: ${typeLabel(m.type)}">${ico('dots', '')}</summary><div class="more-menu">
+        <button class="btn btn-ghost btn-sm" type="button" data-act="edit-meal" data-arg="${m.id}" aria-label="Изменить: ${typeLabel(m.type)}">${ico('edit')}Изменить</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-act="copy-meal" data-arg="${m.id}" aria-label="Копировать: ${typeLabel(m.type)}">${ico('copy')}Копировать</button>
+        <button class="btn btn-ghost btn-sm danger" type="button" data-act="delete-meal" data-arg="${m.id}" aria-label="Удалить: ${typeLabel(m.type)}">${ico('trash')}Удалить</button>
+      </div></details></div></li>`;
   }
 
   function waterTotal(k) { return state.water.filter(w => w.date === k).reduce((s, w) => s + w.ml, 0); }
@@ -313,16 +346,24 @@
     </section>`;
   }
 
-  function habitsToday() {
-    const list = visibleHabits().filter(h => !h.paused && h.days.includes(weekdayIdx(TODAY)));
+  // «На сегодня»: привычки, вода, движение и план одним коротким списком вместо четырёх карточек.
+  function todayList() {
+    const rows = [];
     const marks = state.habits.marks[TODAY] || [];
-    if (!visibleHabits().length) return `<div class="empty">${ico('leaf')}<p>Выберите 1–3 привычки — отмечать их можно прямо здесь.</p><a class="btn btn-secondary" href="#plan/habits">Выбрать привычки</a></div>`;
-    if (!list.length) return '<p class="muted">Сегодня ни одна привычка не запланирована. Расписание можно изменить в плане.</p>';
-    return `<ul class="list">${list.map(h => {
+    const habits = visibleHabits().filter(h => !h.paused && h.days.includes(weekdayIdx(TODAY)));
+    if (!visibleHabits().length) rows.push(`<li class="row-item"><span class="ri-icon t-veg">${ico('leaf', '')}</span><a class="grow" href="#plan/habits"><b>Выбрать 1–3 привычки</b><span class="sub">Отмечать их можно прямо здесь</span></a></li>`);
+    habits.forEach(h => {
       const d = habitDef(h.id), on = marks.includes(h.id);
-      return `<li class="habit"><button class="mark" type="button" data-act="mark-habit" data-arg="${h.id}|${TODAY}" aria-pressed="${on}" aria-label="${on ? 'Снять отметку' : 'Отметить'}: ${esc(d.name)}">${ico('check', '')}</button>
-        <div class="grow"><b>${esc(d.name)}</b><p class="small muted" style="margin:0">${esc(d.hint)}</p></div></li>`;
-    }).join('')}</ul>`;
+      rows.push(`<li class="row-item habit"><button class="mark" type="button" data-act="mark-habit" data-arg="${h.id}|${TODAY}" aria-pressed="${on}" aria-label="${on ? 'Снять отметку' : 'Отметить'}: ${esc(d.name)}">${ico('check', '')}</button><div class="grow"><b>${esc(d.name)}</b><span class="sub">Привычка</span></div></li>`);
+    });
+    const wl = state.water.filter(w => w.date === TODAY), wt = waterTotal(TODAY);
+    rows.push(`<li class="row-item water inline"><span class="ri-icon t-water">${ico('water', '')}</span><div class="grow"><b>Вода</b><span class="sub">${wt ? (showNumbers() ? `${num(wt, 0)} мл` : 'Отмечено') : 'Пока не отмечено'}</span></div>
+      <div class="water-btns">${wl.length ? `<button class="btn btn-ghost btn-sm" type="button" data-act="water-undo" data-arg="${TODAY}" aria-label="Отменить последнюю отметку воды">Отменить</button>` : ''}<button class="btn btn-secondary btn-sm" type="button" data-act="water" data-arg="250|${TODAY}">+250 мл</button></div></li>`);
+    if (!limited()) {
+      (state.plan[TODAY] || []).forEach(p => { const i = ideaById(p.ideaId); rows.push(`<li class="row-item"><span class="ri-icon t-plan">${ico('plan', '')}</span><a class="grow" href="#idea/${i.id}"><b>${esc(i.name)}</b><span class="sub">В плане · ${typeLabel(p.slot).toLowerCase()}</span></a><button class="btn btn-ghost btn-sm" type="button" data-act="idea-draft" data-arg="${i.id}|${p.slot}">В черновик</button></li>`); });
+      rows.push(`<li class="row-item"><span class="ri-icon t-move">${ico('walk', '')}</span><a class="grow" href="#move"><b>Движение после еды</b><span class="sub">Таймер на 10–20 минут</span></a></li>`);
+    }
+    return `<ul class="list today-list">${rows.join('')}</ul>`;
   }
 
   /* ---------- Следующее действие ---------- */
@@ -338,17 +379,12 @@
     if (recent && !limited()) return { eyebrow: 'После еды', title: 'Если удобно — 10–20 минут движения', text: 'Ходьба или домашние дела в своём темпе. Это не «отработка» еды и не влияет на оценку блюда.',
       actions: `<div class="row"><a class="btn btn-primary" href="#move" data-act="timer-for" data-arg="${recent.id}">${ico('timer')}Открыть таймер</a><button class="btn btn-secondary" type="button" data-act="self-report" data-arg="${recent.id}">Отметить самостоятельно</button></div>` };
     if (!mealsOn(TODAY).length) {
-      if (limited()) return { eyebrow: 'Сегодня', title: 'Записывайте еду, когда удобно', text: 'Без оценок и подсчётов — только ваш дневник.', actions: '' };
+      if (limited()) return null;
       return { eyebrow: 'Следующее действие', title: 'Первый приём — с несладкой основой', text: 'Яйца, творог, сыр, рыба или бобовые; хлеб и фрукт — по желанию, в конце. Время не важно.',
         actions: `<a class="btn btn-primary" href="#breakfast">${ico('cup')}Собрать первый приём</a>` };
     }
-    const marks = state.habits.marks[TODAY] || [];
-    const todo = visibleHabits().find(h => !h.paused && h.days.includes(weekdayIdx(TODAY)) && !marks.includes(h.id));
-    if (todo) return { eyebrow: 'Привычка на сегодня', title: habitDef(todo.id).name, text: 'Отметьте, если получилось. Пропуск ничего не обнуляет.',
-      actions: `<button class="btn btn-primary" type="button" data-act="mark-habit" data-arg="${todo.id}|${TODAY}">${ico('check')}Отметить</button>` };
-    if (limited()) return { eyebrow: 'Сегодня', title: 'Записи на месте', text: 'Добавляйте приёмы пищи, когда удобно.', actions: '' };
-    return { eyebrow: 'Следующее действие', title: 'Следующий приём — начните с овощей', text: 'Небольшая закуска или салат перед основным блюдом. Помощник сборки подскажет порядок.',
-      actions: `<button class="btn btn-primary" type="button" data-act="new-meal" data-arg="lunch">${ico('add')}Собрать приём</button>` };
+    // Привычки и следующий приём уже есть в списке «На сегодня» — отдельная карточка не дублирует их.
+    return null;
   }
 
   /* ---------- Экраны ---------- */
@@ -361,7 +397,7 @@
     const radio = (name, v, t, s, cur) => `<label class="choice"><input type="radio" name="${name}" value="${v}" data-field="${name}" ${cur === v ? 'checked' : ''}><span>${t}${s ? `<small>${s}</small>` : ''}</span></label>`;
     let body = '';
     if (step === 0) {
-      body = `${pageHead('Добро пожаловать', 'Ритм еды', 'Помогает сделать одно посильное изменение до еды и спокойно вести дневник.')}
+      body = `${heroSvg('hero hero-big')}${pageHead('Привет! Я Ритмик', 'РИТМ ЕДЫ', 'Помогу сделать одно посильное изменение до еды и спокойно вести дневник. После настройки покажу, где что находится.')}
         <ul class="benefits">
           <li>${ico('leaf')}<div><b>Одно действие до еды</b><p class="muted small">Добавить овощи, белок или переставить сладкое в конец — прямо в собранном приёме.</p></div></li>
           <li>${ico('diary')}<div><b>Дневник без подсчёта калорий</b><p class="muted small">Поиск, избранное, повтор и копирование. Цифры можно скрыть.</p></div></li>
@@ -410,20 +446,16 @@
       ${limitedNote()}
       <div class="hero-actions">
         <button class="btn btn-primary btn-big" type="button" data-act="new-meal">${ico('add')}Добавить еду</button>
-        ${last ? `<button class="btn btn-secondary" type="button" data-act="repeat-meal" data-arg="${last.id}">${ico('repeat')}Повторить: ${typeLabel(last.type).toLowerCase()} · ${esc(last.items.slice(0, 2).map(i => i.name).join(', '))}${last.items.length > 2 ? '…' : ''}</button>` : ''}
-        <div class="quick" role="group" aria-label="Быстрые сценарии">
-          <a class="chip" href="#breakfast">${ico('cup', 'ico')} Первый приём</a><a class="chip" href="#snack">${ico('apple', 'ico')} Перекус</a><a class="chip" href="#restaurant">${ico('restaurant', 'ico')} Ресторан</a>
+        <div class="scroller" role="group" aria-label="Быстрые действия">
+          ${last ? `<button class="chip" type="button" data-act="repeat-meal" data-arg="${last.id}" aria-label="Повторить: ${typeLabel(last.type).toLowerCase()} · ${esc(last.items.map(i => i.name).join(', '))}">${ico('repeat', 'ico')}Повторить ${esc(last.items[0].name.toLowerCase())}${last.items.length > 1 ? '…' : ''}</button>` : ''}
+          <a class="chip ai" href="#scan">${ico('camera', 'ico')}Фото еды<span class="badge-soon">ИИ</span></a><a class="chip" href="#breakfast">${ico('cup', 'ico')}Первый приём</a><a class="chip" href="#snack">${ico('apple', 'ico')}Перекус</a><a class="chip" href="#restaurant">${ico('restaurant', 'ico')}Ресторан</a>
         </div>
       </div>
-      <section class="next" aria-live="polite"><p class="eyebrow">${esc(na.eyebrow)}</p><h2 class="h2">${esc(na.title)}</h2><p class="small">${esc(na.text)}</p>${na.actions}</section>
-      <section class="section" aria-labelledby="meals-h"><div class="section-head"><h2 class="h2" id="meals-h">Приёмы пищи</h2><a class="btn btn-ghost btn-sm" href="#diary">Весь дневник</a></div>
-        ${meals.length ? `<ul class="list">${meals.map(m => mealRow(m)).join('')}</ul>` : '<div class="empty">' + ico('bowl') + '<p>Сегодня записей пока нет.</p></div>'}</section>
-      <section class="section" aria-labelledby="habits-h"><div class="section-head"><h2 class="h2" id="habits-h">Привычки сегодня</h2><a class="btn btn-ghost btn-sm" href="#plan/habits">Настроить</a></div>${habitsToday()}</section>`;
-    const planned = (state.plan[TODAY] || []);
-    const context = `${waterWidget(TODAY)}
-      ${planned.length && !limited() ? `<section class="panel"><h2 class="h3">В плане на сегодня</h2><ul class="list">${planned.map(p => { const i = ideaById(p.ideaId); return `<li class="entry"><span class="grow"><span class="tag">${typeLabel(p.slot)}</span> <a href="#idea/${i.id}">${esc(i.name)}</a></span><button class="btn btn-ghost btn-sm" type="button" data-act="idea-draft" data-arg="${i.id}|${p.slot}">В черновик</button></li>`; }).join('')}</ul></section>` : ''}
-      ${!limited() ? `<section class="panel flat"><h2 class="h3">После еды</h2><p class="small muted">Таймер на 10–20 минут работает и при переходе между экранами.</p><a class="btn btn-secondary btn-sm" href="#move">${ico('timer')}Таймер движения</a></section>` : ''}`;
-    return { title: 'Сегодня', main, context };
+      ${na ? `<section class="next" aria-live="polite"><p class="eyebrow">${esc(na.eyebrow)}</p><h2 class="h3">${esc(na.title)}</h2><p class="small muted">${esc(na.text)}</p>${na.actions}</section>` : ''}
+      <section class="section" aria-labelledby="meals-h"><div class="section-head"><h2 class="h2" id="meals-h">Еда сегодня</h2>${meals.length ? '<a class="btn btn-ghost btn-sm" href="#diary">Дневник</a>' : ''}</div>
+        ${meals.length ? `<ul class="list">${meals.map(m => mealRow(m)).join('')}</ul>` : '<p class="muted small">Пока пусто. Записывайте, когда удобно — до или после еды.</p>'}</section>
+      <section class="section" aria-labelledby="habits-h"><div class="section-head"><h2 class="h2" id="habits-h">На сегодня</h2>${visibleHabits().length ? '<a class="btn btn-ghost btn-sm" href="#plan/habits">Привычки</a>' : ''}</div>${todayList()}</section>`;
+    return { title: 'Сегодня', main, context: '' };
   };
 
   screens.diary = () => {
@@ -433,16 +465,15 @@
     const eatenItems = meals.filter(m => m.status === 'eaten').flatMap(m => m.items);
     const plannedCount = meals.filter(m => m.status === 'planned').length;
     const moves = state.moves.filter(v => v.date === k);
-    const main = `${pageHead('Дневник', esc(relDay(k)), k === TODAY ? '' : esc(fmtDay(k)))}
+    const main = `${pageHead(k === TODAY ? 'Дневник' : esc(fmtDay(k)), esc(relDay(k)))}
       <div class="row" role="group" aria-label="Выбор дня">
         <button class="icon-btn" type="button" data-act="diary-day" data-arg="-1" aria-label="Предыдущий день">${ico('left', '')}</button>
         <input type="date" id="diary-date" value="${k}" data-field="diary-date" aria-label="Дата" style="width:auto;flex:1;max-width:220px">
         <button class="icon-btn" type="button" data-act="diary-day" data-arg="1" aria-label="Следующий день">${ico('right', '')}</button>
         ${k !== TODAY ? '<button class="btn btn-ghost btn-sm" type="button" data-act="diary-today">К сегодняшнему дню</button>' : ''}
       </div>
-      <div class="hero-actions"><button class="btn btn-primary btn-big" type="button" data-act="new-meal" data-arg="|${k}">${ico('add')}Добавить еду${k !== TODAY ? ' в этот день' : ''}</button></div>
-      <section class="section" aria-labelledby="dm-h"><h2 class="h2" id="dm-h" style="margin-bottom:8px">Приёмы пищи</h2>
-      ${meals.length ? `<ul class="list">${meals.map(m => mealRow(m)).join('')}</ul>` : `<div class="empty">${ico('diary')}<p>В этот день записей нет.</p></div>`}</section>
+      <section class="section" aria-labelledby="dm-h" style="margin-top:20px"><div class="section-head"><h2 class="h2" id="dm-h">Приёмы пищи</h2><button class="btn btn-ghost btn-sm" type="button" data-act="new-meal" data-arg="|${k}">${ico('add')}Добавить${k !== TODAY ? ' в этот день' : ''}</button></div>
+      ${meals.length ? `<ul class="list">${meals.map(m => mealRow(m)).join('')}</ul>` : '<p class="muted small">В этот день записей нет.</p>'}</section>
       ${moves.length ? `<section class="section"><h2 class="h2">Движение</h2><ul class="list">${moves.map(v => `<li class="entry"><span class="grow">${ico('walk')} ${esc(v.kind)}${showNumbers() ? `, ${v.minutes} мин` : ''} <span class="tag">${v.source === 'timer' ? 'таймер + ваш ответ' : 'самоотчёт'}</span></span><button class="icon-btn plain" type="button" data-act="delete-move" data-arg="${v.id}" aria-label="Удалить запись движения">${ico('trash', '')}</button></li>`).join('')}</ul></section>` : ''}`;
     const nutr = showNumbers() && !limited() && (eatenItems.length || plannedCount)
       ? `<section class="panel"><h2 class="h3">Пищевая ценность съеденного</h2>
@@ -534,10 +565,10 @@
     const applicable = ev.rules.filter(r => r.state !== 'na'), na = ev.rules.filter(r => r.state === 'na');
     const stIcon = { met: ico('check', ''), opportunity: ico('right', ''), unknown: '?', na: '—' };
     const stName = { met: 'подтверждено', opportunity: 'можно улучшить', unknown: 'данных не хватает', na: 'не применяется' };
-    const list = showScore() ? `<div class="score-line" style="margin:14px 0 4px">${pips(ev)}<b>${esc(ev.summary)}</b></div>
-      <ul class="rules">${applicable.map(r => `<li class="rule"><span class="rule-state ${r.state}" aria-hidden="true">${stIcon[r.state]}</span><div><h4>${esc(r.title)} <span class="sr-only">— ${stName[r.state]}</span></h4><p>${esc(r.text)}</p></div></li>`).join('')}</ul>
+    const list = showScore() ? `<div class="score-line" style="margin:12px 0 0">${pips(ev)}<b>${esc(ev.summary)}</b></div>
+      <details class="disclose"><summary>Подробнее об оценке</summary><div class="disclose-body"><ul class="rules">${applicable.map(r => `<li class="rule"><span class="rule-state ${r.state}" aria-hidden="true">${stIcon[r.state]}</span><div><h4>${esc(r.title)} <span class="sr-only">— ${stName[r.state]}</span></h4><p>${esc(r.text)}</p></div></li>`).join('')}</ul>
       ${na.length ? `<details><summary class="small muted" style="min-height:44px;display:flex;align-items:center;cursor:pointer">Не применяется к этому приёму: ${na.length}</summary><ul class="rules">${na.map(r => `<li class="rule"><span class="rule-state na" aria-hidden="true">—</span><div><h4>${esc(r.title)}</h4><p>${esc(r.text)}</p></div></li>`).join('')}</ul></details>` : ''}
-      <p class="tiny muted">Оценка считает только применимые правила. Глюкоза, калории, вес и движение в неё не входят.</p>` : '';
+      <p class="tiny muted">Оценка считает только применимые правила. Глюкоза, калории, вес и движение в неё не входят.</p></div></details>` : '';
     return advice + list;
   }
 
@@ -545,44 +576,44 @@
   screens.add = () => {
     const d = state.draft, s = state.search;
     const tabs = [['all', 'Все'], ['recent', 'Недавнее'], ['fav', 'Избранное'], ['own', 'Свои']];
-    const main = `${backLink(d.date === TODAY ? 'today' : 'diary', d.date === TODAY ? 'Сегодня' : 'Дневник')}
-      ${pageHead(d.mealId ? 'Изменение записи' : 'Новая запись', d.mealId ? `Изменить: ${typeLabel(d.type).toLowerCase()}` : 'Добавить еду')}
-      <div class="stack">
-        <div class="seg" role="group" aria-label="Приём пищи">${Object.entries(D.MEAL_TYPES).map(([k, v]) => `<button type="button" data-act="draft-type" data-arg="${k}" aria-pressed="${d.type === k}">${v}</button>`).join('')}</div>
-        <div class="seg" role="group" aria-label="Когда">${[['before', 'Собираю до еды'], ['after', 'Уже поел(а)']].map(([k, v]) => `<button type="button" data-act="draft-phase" data-arg="${k}" aria-pressed="${d.phase === k}">${v}</button>`).join('')}</div>
-        <div class="field-row"><div><label for="draft-date">Дата</label><input type="date" id="draft-date" value="${d.date}" data-field="draft-date"></div></div>
+    const cats = ['', 'veg', 'protein', 'dairy', 'starch', 'fruit', 'sweet', 'mixed'];
+    // «Отменить» — вверху, как в листах iOS/Android: внизу его закрывала бы закреплённая панель состава.
+    const main = `<div class="row nowrap" style="justify-content:space-between">${backLink(d.date === TODAY ? 'today' : 'diary', d.date === TODAY ? 'Сегодня' : 'Дневник')}<button class="btn btn-ghost btn-sm" type="button" data-act="cancel-draft" style="margin:-6px -10px 8px 0">Отменить</button></div>
+      ${pageHead('', d.mealId ? `Изменить: ${typeLabel(d.type).toLowerCase()}` : 'Добавить еду')}
+      <div class="add-meta">
+        <div class="pills" role="group" aria-label="Приём пищи">${Object.entries(D.MEAL_TYPES).map(([k, v]) => `<button type="button" data-act="draft-type" data-arg="${k}" aria-pressed="${d.type === k}">${v}</button>`).join('')}</div>
+        <div class="meta-line">
+          <div class="seg" role="group" aria-label="Когда">${[['before', 'До еды'], ['after', 'Уже поел(а)']].map(([k, v]) => `<button type="button" data-act="draft-phase" data-arg="${k}" aria-pressed="${d.phase === k}">${v}</button>`).join('')}</div>
+          <label for="draft-date" class="sr-only">Дата</label><input type="date" id="draft-date" value="${d.date}" data-field="draft-date">
+        </div>
       </div>
-      <section class="section" aria-labelledby="search-h">
-        <h2 class="h2" id="search-h">Поиск</h2>
-        <label for="food-q" class="sr-only">Поиск продукта</label>
-        <input type="search" id="food-q" placeholder="Например, гречка или творог" value="${esc(s.q)}" data-field="food-q" autocomplete="off" style="margin:10px 0">
-        <div class="seg" role="group" aria-label="Источник">${tabs.map(([k, v]) => `<button type="button" data-act="food-tab" data-arg="${k}" aria-pressed="${s.tab === k}">${v}</button>`).join('')}</div>
-        <div class="chips" role="group" aria-label="Группа" style="margin-top:10px">${['', 'veg', 'protein', 'dairy', 'starch', 'fruit', 'sweet', 'mixed'].map(c => `<button class="chip" type="button" data-act="food-cat" data-arg="${c}" aria-pressed="${s.cat === c}">${c ? D.CATS[c].short : 'все группы'}</button>`).join('')}</div>
-        <div id="food-results" style="margin-top:8px">${foodRows()}</div>
-        <p class="tiny muted">Карточки — пример состава для прототипа. Калории и нутриенты в них неизвестны и не угадываются по названию.</p>
+      ${limited() ? '' : `<a class="scan-entry" href="#scan" style="margin-top:16px"><span class="ri-icon t-ai">${ico('camera', '')}</span><span class="grow"><b>Сфотографировать тарелку</b><span class="sub small muted" style="display:block">ИИ распознает состав и калории</span></span><span class="badge-soon">скоро</span></a>`}
+      <section class="section" aria-labelledby="search-h" style="margin-top:16px">
+        <h2 class="sr-only" id="search-h">Поиск продуктов</h2>
+        <div class="search-box">${ico('search', '')}<label for="food-q" class="sr-only">Поиск продукта</label>
+        <input type="search" id="food-q" placeholder="Гречка, творог, салат…" value="${esc(s.q)}" data-field="food-q" autocomplete="off"></div>
+        <div class="scroller" role="group" aria-label="Источник">${tabs.map(([k, v]) => `<button class="chip" type="button" data-act="food-tab" data-arg="${k}" aria-pressed="${s.tab === k}">${v}</button>`).join('')}</div>
+        <details class="disclose" ${s.cat ? 'open' : ''}><summary>${s.cat ? `Группа: ${D.CATS[s.cat].short}` : 'Фильтр по группе'}</summary>
+          <div class="chips disclose-body" role="group" aria-label="Группа">${cats.map(c => `<button class="chip" type="button" data-act="food-cat" data-arg="${c}" aria-pressed="${s.cat === c}">${c ? D.CATS[c].short : 'все группы'}</button>`).join('')}</div></details>
+        <div id="food-results">${foodRows()}</div>
       </section>
       <section class="section" aria-labelledby="draft-h">
-        <div class="section-head"><h2 class="h2" id="draft-h">${d.phase === 'before' ? 'Состав и порядок' : 'Что вы съели'}</h2><span class="tag">${d.items.length ? `${d.items.length} комп.` : 'пусто'}</span></div>
-        ${d.items.length ? `<ol class="list" style="list-style:none;padding:0">${d.items.map(compRow).join('')}</ol>` : '<div class="empty">' + ico('bowl') + '<p>Добавьте продукты из поиска. Сложное блюдо — одним компонентом «Смешанное блюдо».</p></div>'}
+        <div class="section-head"><h2 class="h2" id="draft-h" tabindex="-1">${d.phase === 'before' ? 'Состав и порядок' : 'Что вы съели'}</h2>${d.items.length ? `<span class="tag">${d.items.length} комп.</span>` : ''}</div>
+        ${d.items.length ? `<ol class="list" style="list-style:none;padding:0">${d.items.map(compRow).join('')}</ol>` : '<p class="muted small">Нажмите «+» у продукта. Сложное блюдо можно добавить целиком — как «Смешанное блюдо».</p>'}
         ${d.phase === 'after' && d.items.length > 1 ? `<fieldset style="margin-top:14px"><legend>Ели в этом порядке?</legend><div class="seg" role="group">${[['confirmed', 'Да, в этом порядке'], ['unknown', 'Всё вместе / не помню']].map(([k, v]) => `<button type="button" data-act="draft-order" data-arg="${k}" aria-pressed="${d.orderStatus === k}">${v}</button>`).join('')}</div></fieldset>` : ''}
         ${d.type === 'dessert' && !limited() ? `<fieldset style="margin-top:14px"><legend>Это сразу после основной еды?</legend><div class="seg" role="group">${[[true, 'Да, сразу после'], [false, 'Нет или не знаю']].map(([k, v]) => `<button type="button" data-act="draft-aftermain" data-arg="${k}" aria-pressed="${d.afterMain === k}">${v}</button>`).join('')}</div></fieldset>` : ''}
+        ${d.items.length || limited() ? `<div id="assembly" style="margin-top:14px">${assembly(d)}</div>` : '<div id="assembly"></div>'}
       </section>
-      <section class="section" aria-labelledby="asm-h" id="assembly"><h2 class="h2" id="asm-h" style="margin-bottom:10px">Сборка</h2>${assembly(d)}</section>
-      <div class="onb-actions" style="margin-top:24px">
-        <button class="btn btn-secondary" type="button" data-act="cancel-draft">Отменить</button>
-        <button class="btn btn-primary" type="button" data-act="save-draft" ${d.items.length ? '' : 'disabled'}>${saveLabel(d)}</button>
-      </div>
       ${d.items.length ? `<div class="draft-bar" role="region" aria-label="Состав черновика">
         <span class="grow"><b>${showNumbers() ? `В составе ${d.items.length}` : 'Есть состав'}</b></span>
         <button class="btn btn-secondary btn-sm" type="button" data-act="view-draft">Посмотреть</button>
         <button class="btn btn-primary btn-sm" type="button" data-act="save-draft">${d.mealId ? 'Сохранить' : d.phase === 'before' ? 'Сохранить' : 'Записать'}</button></div>` : ''}`;
-    // В ограниченном режиме справа нет подсказок по порядку групп — только нейтральное пояснение.
+    // В ограниченном режиме справа нет подсказок по порядку групп — только нейтральное пояснение. На телефоне справка не показывается.
     const context = limited()
-      ? '<section class="panel flat"><h2 class="h3">Только запись</h2><p class="small muted">Сборка без советов и оценок. Пищевая ценность не угадывается по названию.</p></section>'
-      : `<section class="panel"><h2 class="h3">Порядок групп</h2><ol class="small" style="padding-left:1.2em;margin:8px 0">
+      ? '<section class="panel flat desk-only"><h2 class="h3">Только запись</h2><p class="small muted">Сборка без советов и оценок. Пищевая ценность не угадывается по названию.</p></section>'
+      : `<section class="panel desk-only"><h2 class="h3">Порядок групп</h2><ol class="small" style="padding-left:1.2em;margin:8px 0">
       <li>Овощи, зелень, бобовые</li><li>Белок и жиры</li><li>Крахмал, затем сладкое и фрукты</li></ol>
-      <p class="small muted">Смешанное блюдо не разбираем: можно сначала съесть доступные овощи, потом остальное вместе.</p></section>
-      <section class="panel flat"><h2 class="h3">Без подсчёта</h2><p class="small muted">Сборка не считает калории и не предсказывает глюкозу. Она подсказывает одно действие по составу и порядку.</p></section>`;
+      <p class="small muted">Смешанное блюдо не разбираем. Калории и глюкоза не считаются; карточки продуктов — примеры состава без пищевой ценности.</p></section>`;
     return { title: 'Добавить еду', main, context };
   };
 
@@ -665,17 +696,18 @@
     if (sub === 'ideas') return ideasScreen();
     if (sub === 'shopping') return shoppingScreen();
     const days = weekDays(), k = state.planDate, plan = state.plan[k] || [];
-    const main = `${pageHead('План', 'Неделя', 'Разложите идеи по дням — список покупок соберётся сам.')}${planTabs('plan')}
+    const main = `${pageHead('', 'План')}${planTabs('plan')}
       <div class="row nowrap" style="margin-bottom:10px"><button class="icon-btn" type="button" data-act="plan-week" data-arg="-7" aria-label="Предыдущая неделя">${ico('left', '')}</button>
         <b class="grow" style="text-align:center">${fmtShort(days[0])} — ${fmtShort(days[6])}</b>
         <button class="icon-btn" type="button" data-act="plan-week" data-arg="7" aria-label="Следующая неделя">${ico('right', '')}</button></div>
       <div class="week-strip" role="group" aria-label="День недели">${days.map((d, i) => `<button class="day-btn" type="button" data-act="plan-day" data-arg="${d}" aria-pressed="${d === k}" aria-label="${fmtDay(d)}${(state.plan[d] || []).length ? ', есть план' : ''}"><span>${WD[i]}</span><b>${dateOf(d).getDate()}</b><span class="dot ${(state.plan[d] || []).length ? '' : 'off'}"></span></button>`).join('')}</div>
-      <section class="section" aria-labelledby="pd-h"><h2 class="h2" id="pd-h" style="margin-bottom:6px">${esc(relDay(k))}</h2>
-        ${['first', 'lunch', 'dinner', 'snack'].map(slot => {
-          const here = plan.filter(p => p.slot === slot);
-          return `<div class="slot"><span class="slot-name">${typeLabel(slot)}</span><div class="grow stack">${here.map(p => { const i = ideaById(p.ideaId); return `<div class="row nowrap" data-flip="${p.id}"><a class="grow" href="#idea/${i.id}">${esc(i.name)}</a><button class="btn btn-ghost btn-sm" type="button" data-act="idea-draft" data-arg="${i.id}|${slot}|${k}">В черновик</button><button class="icon-btn plain" type="button" data-act="plan-remove" data-arg="${k}|${p.id}" aria-label="Убрать из плана: ${esc(i.name)}">${ico('close', '')}</button></div>`; }).join('')}
-          <button class="btn btn-ghost btn-sm" type="button" data-act="plan-pick" data-arg="${k}|${slot}" style="justify-self:start">${ico('add')}Добавить идею</button></div></div>`;
-        }).join('')}
+      <section class="section" aria-labelledby="pd-h" style="margin-top:20px"><h2 class="h2" id="pd-h" style="margin-bottom:6px">${esc(relDay(k))}</h2>
+        ${plan.length ? `<ul class="list today-list">${plan.map(p => { const i = ideaById(p.ideaId); return `<li class="row-item" data-flip="${p.id}"><span class="ri-icon">${ico(TYPE_ICON[p.slot] || 'plate', '')}</span><a class="grow" href="#idea/${i.id}"><b>${esc(i.name)}</b><span class="sub">${typeLabel(p.slot)}</span></a>
+          <details class="more"><summary aria-label="Действия: ${esc(i.name)}">${ico('dots', '')}</summary><div class="more-menu">
+          <button class="btn btn-ghost btn-sm" type="button" data-act="idea-draft" data-arg="${i.id}|${p.slot}|${k}">${ico('add')}В черновик</button>
+          <button class="btn btn-ghost btn-sm danger" type="button" data-act="plan-remove" data-arg="${k}|${p.id}" aria-label="Убрать из плана: ${esc(i.name)}">${ico('close')}Убрать из плана</button></div></details></li>`; }).join('')}</ul>`
+          : '<p class="muted small">На этот день ничего не запланировано.</p>'}
+        <div class="scroller" role="group" aria-label="Добавить идею" style="margin-top:12px">${['first', 'lunch', 'dinner', 'snack'].map(slot => `<button class="chip" type="button" data-act="plan-pick" data-arg="${k}|${slot}">${ico('add', 'ico')}${typeLabel(slot)}</button>`).join('')}</div>
       </section>`;
     return { title: 'План', main, context: shoppingPanel(true) };
   };
@@ -802,22 +834,37 @@
         if (!last || E.dayDiff(p.d, last[last.length - 1].d) > 1) groups.push([p]);
         else last.push(p);
       }
-      return groups.filter(g => g.length > 1).map(g => `<polyline class="${cls}" data-dates="${g.map(p => p.d).join(',')}" points="${g.map(p => `${x(p.d).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ')}"/>`).join('');
+      return groups.filter(g => g.length > 1).map(g => `${cls === 'line' ? `<polygon class="area" fill="url(#areaGrad)" points="${x(g[0].d).toFixed(1)},${H - pb} ${g.map(p => `${x(p.d).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ')} ${x(g[g.length - 1].d).toFixed(1)},${H - pb}"/>` : ''}<polyline class="${cls}" pathLength="1" data-dates="${g.map(p => p.d).join(',')}" points="${g.map(p => `${x(p.d).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ')}"/>`).join('');
     };
     const ticks = [lo, (lo + hi) / 2, hi];
     return `<svg class="chart ${opts.example ? 'example' : ''}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label)}">
+      <defs><linearGradient id="lineGrad" x1="0" x2="1"><stop offset="0" stop-color="#2f8fe0"/><stop offset="1" stop-color="#13a47a"/></linearGradient>
+      <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#13a47a" stop-opacity="0.28"/><stop offset="1" stop-color="#13a47a" stop-opacity="0"/></linearGradient></defs>
       ${ticks.map(v => `<line class="axis" x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}"/><text x="${pl - 6}" y="${y(v) + 4}" text-anchor="end">${num(v)}</text>`).join('')}
       <text x="${pl}" y="${H - 8}">${fmtShort(points[0].d)}</text><text x="${W - pr}" y="${H - 8}" text-anchor="end">${fmtShort(points[points.length - 1].d)}</text>
       ${opts.example ? `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" style="font-size:28px;font-weight:700;opacity:.12;letter-spacing:6px">ПРИМЕР</text>` : ''}
       ${lines(meds, 'median')}
       ${lines(real, 'line')}
-      ${real.map(p => `<circle class="pt" cx="${x(p.d)}" cy="${y(p.v)}" r="4"/>`).join('')}</svg>`;
+      ${real.map((p, i) => `<circle class="pt" style="--i:${i}" cx="${x(p.d)}" cy="${y(p.v)}" r="4.5"/>`).join('')}</svg>`;
   }
   function medianSeries(entries) {
     const days = [...new Set(entries.map(e => e.date))].sort();
     return days.map(d => ({ d, v: E.median7(entries, d) }));
   }
 
+  // Макет тела: силуэт и кольца замеров. Значения — только ваши записи; без «идеальной фигуры» и сравнений.
+  const BODY_RINGS = [['Грудь', 60, 92, 27, 6], ['Талия', 60, 128, 24, 5], ['Бёдра', 60, 158, 28, 6], ['Плечо', 29, 100, 7, 3]];
+  function bodyCard() {
+    const latest = k => [...state.measures].filter(m => m.kind === k).sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created)[0];
+    return `<section class="section" aria-labelledby="body-h"><h2 class="h2" id="body-h" style="margin-bottom:8px">Тело</h2><div class="body-card">
+      <svg class="body-svg" viewBox="0 0 120 300" role="img" aria-label="Схема тела с местами замеров"><defs><linearGradient id="scanGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#13a47a" stop-opacity="0"/><stop offset="1" stop-color="#13a47a" stop-opacity="0.45"/></linearGradient></defs>
+        <ellipse id="silHead" class="silhouette" cx="60" cy="23" rx="14" ry="17"/>
+        <path id="silBody" class="silhouette" d="M54 39L66 39L67 49C80 50 90 53 92 62C96 80 100 120 103 160C104 168 100 172 97 168C94 140 90 110 86 84C86 100 84 118 83 128C86 142 88 152 87 164C86 200 82 250 80 284C82 292 70 293 68 287C68 250 66 205 61 176L59 176C54 205 52 250 52 287C50 293 38 292 40 284C38 250 34 200 33 164C32 152 34 142 37 128C36 118 34 100 34 84C30 110 26 140 23 168C20 172 16 168 17 160C20 120 24 80 28 62C30 53 40 50 53 49Z"/>
+        ${BODY_RINGS.map(([k, cx, cy, rx, ry], i) => `<ellipse class="ring ${latest(k) ? '' : 'none'}" style="--i:${i}" pathLength="1" cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"/>`).join('')}
+        <clipPath id="bodyClip"><use href="#silHead"/><use href="#silBody"/></clipPath><g clip-path="url(#bodyClip)"><rect class="scan" x="0" y="0" width="120" height="40"/></g></svg>
+      <ul class="body-legend">${BODY_RINGS.map(([k]) => { const m = latest(k); return `<li><span><i class="dot ${m ? '' : 'none'}"></i>${k}</span>${m ? `<b>${num(m.cm)} см${demoTag(m)}</b>` : '<span class="small muted">нет замера</span>'}</li>`; }).join('')}</ul>
+    </div><p class="tiny muted" style="margin-top:6px">Схема показывает, где сделан замер. Добавить — в разделе «Замеры» ниже.</p></section>`;
+  }
   screens.progress = () => {
     if (!showNumbers()) return { title: 'Прогресс', main: `${pageHead('Прогресс', 'Прогресс')}<p class="lead">Режим без цифр скрывает вес, оценки и графики на всех экранах.</p><a class="btn btn-secondary" href="#settings">Настройки цифр</a>
       <section class="section">${habitWeekCompact()}</section>` };
@@ -836,28 +883,33 @@
       chart = `<p class="tag amber" style="margin-bottom:8px">Пример · вымышленные значения, не ваши данные</p>${chartSvg(pts, { example: true, median: medianSeries(exEntries), label: 'Пример графика веса с вымышленными значениями' })}`;
     } else if (ws.length < 2) chart = `<div class="empty">${ico('progress')}<p>Чтобы увидеть линию, нужно хотя бы две записи веса. Пробелы не дорисовываются.</p></div>`;
     else chart = chartSvg(ws.map(w => ({ d: w.date, v: w.kg })), { median: medianSeries(entries), label: `График ваших записей веса: ${ws.length}` });
-    const main = `${pageHead('Прогресс', 'Вес и замеры', 'Только ваши записи этой вкладки. Без прогноза даты, дефицита и норм калорий.')}
+    // Сначала то, ради чего открывают экран: последнее значение, медиана и график. Ввод — одной строкой, списки свёрнуты.
+    const main = `${pageHead('', 'Прогресс')}
       ${limitedNote()}
-      <section class="panel" aria-labelledby="w-h"><h2 class="h2" id="w-h">Добавить вес</h2>
-        <div class="field-row"><div><label for="w-date">Дата</label><input type="date" id="w-date" value="${TODAY}" max="${TODAY}"></div>
-        <div><label for="w-kg">Вес, кг</label><input type="text" id="w-kg" min="20" max="400" step="0.1" inputmode="decimal" placeholder="например, 72,4"></div></div>
-        <button class="btn btn-primary" type="button" data-act="weight-add" style="margin-top:12px">Сохранить</button></section>
-      ${limited() ? '' : `<section class="section" aria-labelledby="ch-h"><div class="section-head"><h2 class="h2" id="ch-h">График</h2>
-        <div class="seg" role="group" aria-label="Данные графика">${[['mine', 'Мои записи'], ['example', 'Посмотреть пример']].map(([k, v]) => `<button type="button" data-act="chart-mode" data-arg="${k}" aria-pressed="${state.chartMode === k}">${v}</button>`).join('')}</div></div>
+      <div class="stats"><div class="stat"><span class="small muted">Последняя запись</span><b>${ws.length ? `${num(ws[ws.length - 1].kg)} кг` : '—'}</b></div>
+        <div class="stat"><span class="small muted">Медиана за 7 дней</span><b>${med != null ? `${num(med)} кг` : '—'}</b>${med == null ? '<span class="tiny muted">нужно 3 дня с измерениями</span>' : ''}</div></div>
+      ${limited() ? '' : `<section class="section" aria-labelledby="ch-h" style="margin-top:18px"><h2 class="sr-only" id="ch-h">График</h2>
         ${chart}
-        <div class="legend" style="margin-top:6px"><span><i></i>измерения</span><span><i class="med"></i>медиана за 7 дней</span></div>
-        <div class="stats" style="margin-top:14px"><div class="stat"><span class="small muted">Последняя запись</span><b>${ws.length ? `${num(ws[ws.length - 1].kg)} кг` : '—'}</b></div>
-        <div class="stat"><span class="small muted">Медиана за 7 дней</span><b>${med != null ? `${num(med)} кг` : '—'}</b>${med == null ? '<span class="tiny muted">нужно не меньше 3 дней с измерениями за неделю</span>' : ''}</div></div></section>`}
-      <section class="section" aria-labelledby="wl-h"><h2 class="h2" id="wl-h" style="margin-bottom:6px">Записи веса</h2>
+        <div class="row" style="justify-content:space-between;margin-top:6px"><div class="legend"><span><i></i>измерения</span><span><i class="med"></i>медиана 7 дней</span></div>
+        <button class="btn btn-ghost btn-sm" type="button" data-act="chart-mode" data-arg="${ex ? 'mine' : 'example'}" aria-pressed="${ex}">${ex ? 'Мои записи' : 'Пример графика'}</button></div></section>`}
+      ${bodyCard()}
+      <section class="section" aria-labelledby="w-h"><h2 class="h2" id="w-h" style="margin-bottom:8px">Добавить вес</h2>
+        <div class="weight-line"><label for="w-kg" class="sr-only">Вес, кг</label><input type="text" id="w-kg" min="20" max="400" step="0.1" inputmode="decimal" placeholder="Вес, кг">
+        <label for="w-date" class="sr-only">Дата</label><input type="date" id="w-date" value="${TODAY}" max="${TODAY}">
+        <button class="btn btn-primary" type="button" data-act="weight-add">Добавить</button></div>
+        <p class="tiny muted" style="margin-top:6px">Только ваши записи. Без прогноза даты и норм калорий.</p></section>
+      <section class="section">
+        <details class="disclose" data-keep="weights" ${keepOpen('weights')}><summary>Записи веса${ws.length ? ` (${ws.length})` : ''}</summary><div class="disclose-body">
         ${ws.length ? `<ul class="list">${[...ws].reverse().map(w => `<li class="entry" data-flip="${w.id}"><span class="grow">${esc(relDay(w.date))} · <b>${num(w.kg)} кг</b>${demoTag(w)}</span>
-          <button class="btn btn-ghost btn-sm" type="button" data-act="weight-edit" data-arg="${w.id}">${ico('edit')}Изменить</button><button class="icon-btn plain" type="button" data-act="weight-delete" data-arg="${w.id}" aria-label="Удалить запись веса за ${esc(relDay(w.date))}">${ico('trash', '')}</button></li>`).join('')}</ul>`
-        : '<p class="muted">Записей пока нет.</p>'}</section>
-      <section class="section" aria-labelledby="ms-h"><h2 class="h2" id="ms-h">Замеры</h2>
+          <button class="icon-btn plain" type="button" data-act="weight-edit" data-arg="${w.id}" aria-label="Изменить запись веса за ${esc(relDay(w.date))}">${ico('edit', '')}</button><button class="icon-btn plain" type="button" data-act="weight-delete" data-arg="${w.id}" aria-label="Удалить запись веса за ${esc(relDay(w.date))}">${ico('trash', '')}</button></li>`).join('')}</ul>`
+        : '<p class="muted small">Записей пока нет.</p>'}</div></details>
+        <details class="disclose" id="measures" data-keep="measures" ${keepOpen('measures')}><summary>Замеры${state.measures.length ? ` (${state.measures.length})` : ''}</summary><div class="disclose-body">
         <div class="field-row"><div><label for="m-kind">Что</label><select id="m-kind">${['Талия', 'Бёдра', 'Грудь', 'Плечо'].map(k => `<option>${k}</option>`).join('')}</select></div>
         <div><label for="m-cm">См</label><input id="m-cm" type="text" min="10" max="300" step="0.5" inputmode="decimal"></div>
         <div><label for="m-date">Дата</label><input id="m-date" type="date" value="${TODAY}" max="${TODAY}"></div></div>
         <button class="btn btn-secondary" type="button" data-act="measure-add" style="margin-top:12px">Добавить замер</button>
         ${state.measures.length ? `<ul class="list" style="margin-top:8px">${[...state.measures].sort((a, b) => b.date.localeCompare(a.date)).map(m => `<li class="entry" data-flip="${m.id}"><span class="grow">${esc(relDay(m.date))} · ${esc(m.kind)} <b>${num(m.cm)} см</b></span><button class="icon-btn plain" type="button" data-act="measure-delete" data-arg="${m.id}" aria-label="Удалить замер ${esc(m.kind)}">${ico('trash', '')}</button></li>`).join('')}</ul>` : ''}
+        </div></details>
       </section>
       <section class="section">${habitWeekCompact()}</section>`;
     return { title: 'Прогресс', main };
@@ -882,6 +934,42 @@
     const details = showScore() ? `<section class="section"><h2 class="h2">Из чего сложилась оценка</h2><p class="lead">${esc(ev.summary)}</p><ul class="rules">${ev.rules.map(r => `<li class="rule"><div><h3 class="h3">${esc(r.title)}</h3><p class="small"><b>${labels[r.state]}.</b> ${esc(r.text)}</p></div></li>`).join('')}</ul><p class="note">Неизвестное не считается нарушением. Это оценка известных действий, а не измерение глюкозы, здоровья или качества человека. Движение и калории в неё не входят.</p></section>` : `<p class="note">${limited() ? 'В ограниченном режиме' : 'В режиме без цифр'} оценки и их разбор скрыты. Запись доступна без них.</p>`;
     return { title: 'Разбор приёма', main: `${backLink('diary', 'Дневник')}${pageHead(relDay(m.date), typeLabel(m.type), m.status === 'planned' ? 'Собрано до еды. Факт ещё не подтверждён.' : 'Записано после еды. Прошлый порядок не меняем советом.')}<ul class="list">${m.items.map(i => `<li class="entry">${itemText(i)}</li>`).join('')}</ul>${details}<div class="row"><button class="btn btn-primary" type="button" data-act="edit-meal" data-arg="${m.id}">Изменить запись</button><a class="btn btn-secondary" href="#method">Как работает подход</a></div>` };
   };
+  /* --- Авторы --- */
+  function creditsHtml() {
+    return `<section class="credits" aria-labelledby="cr-h">
+      <svg class="seal" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="sealGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1fb89b"/><stop offset="1" stop-color="#0b6e72"/></linearGradient></defs>
+        <path d="M32 4l22 8v17c0 15-9 25-22 31C19 54 10 44 10 29V12z" fill="url(#sealGrad)"/><path d="M28 20h8v8h8v8h-8v8h-8v-8h-8v-8h8z" fill="#fff"/></svg>
+      <p class="brand-line" id="cr-h">Ритм еды</p>
+      <p style="margin:0;font-weight:600">Создано под наблюдением врача</p>
+      <dl><div><dt>Медицинское сопровождение</dt><dd>Врач Авагян Шакро Норикович</dd></div>
+        <div><dt>Создатель</dt><dd>Малхасян Андраник Мартунович</dd></div></dl>
+      <div class="fact"><span>47 положений методики</span><span>6 групп правил оценки</span><span>Безопасный режим для групп риска</span></div>
+      <p class="tiny muted" style="margin:4px 0 0;max-width:42ch">Приложение не ставит диагнозов и не заменяет очную консультацию врача. Рекомендации общие, без лечебных обещаний и гарантий похудения.</p>
+    </section>`;
+  }
+
+  /* --- Фото еды · ИИ (интерфейс готов, распознавание не подключено) --- */
+  const SOON = [['camera', 'ai', 'Фото еды · ИИ', 'Состав, порядок и примерные калории по снимку тарелки'], ['barcode', 'plan', 'Сканер штрихкода', 'Продукт из магазина в дневник за секунду'],
+    ['mic', 'water', 'Голосовой ввод', '«Съел гречку с курицей» — и запись готова'], ['heart', 'move', 'Шаги и здоровье', 'Apple Health и Health Connect с вашего разрешения'],
+    ['bell', 'veg', 'Напоминания', 'Мягко, в выбранное время, без давления'], ['sync', 'ai', 'Синхронизация', 'Дневник на телефоне и компьютере после входа']];
+  screens.scan = () => {
+    if (limited()) return { title: 'Фото еды', main: `${backLink('add', 'Добавить еду')}${pageHead('Скоро', 'Фото еды')}${limitedNote()}<p>В ограниченном режиме подсчёт калорий по фото не предлагается. Записывайте еду вручную.</p>` };
+    const plate = `<svg class="plate-art" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="92" fill="#f4f7f8"/><circle cx="100" cy="100" r="74" fill="#ffffff" stroke="#dfe7ea" stroke-width="3"/>
+      <g fill="#2fae6b"><circle cx="70" cy="72" r="15"/><circle cx="86" cy="58" r="12"/><circle cx="58" cy="92" r="11"/></g><g fill="#7fd36b"><circle cx="78" cy="86" r="9"/><circle cx="96" cy="74" r="7"/></g>
+      <path d="M108 60c22-6 42 6 44 24 2 16-14 22-30 20s-28-10-26-24c0-10 4-18 12-20z" fill="#f08a5d"/><path d="M118 74c10-2 20 2 24 8" stroke="#fff" stroke-width="3" fill="none" opacity=".6"/>
+      <g fill="#e8cf8f"><ellipse cx="80" cy="132" rx="7" ry="4"/><ellipse cx="94" cy="140" rx="7" ry="4"/><ellipse cx="108" cy="134" rx="7" ry="4"/><ellipse cx="96" cy="126" rx="7" ry="4"/><ellipse cx="120" cy="142" rx="7" ry="4"/><ellipse cx="84" cy="146" rx="7" ry="4"/><ellipse cx="110" cy="150" rx="7" ry="4"/><ellipse cx="124" cy="128" rx="7" ry="4"/></g></svg>`;
+    const main = `${backLink('add', 'Добавить еду')}${pageHead('ИИ · скоро', 'Фото еды')}
+      <div class="scan-card"><div class="scan-view">${plate}<div class="scan-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="scan-line" aria-hidden="true"></div><span class="scan-label">Демонстрация экрана</span></div>
+        <ol class="steps-ai"><li><span><b>Сфотографируйте тарелку</b><br><span class="small muted">До еды — чтобы получить подсказку по порядку.</span></span></li>
+          <li><span><b>ИИ предложит состав и калории</b><br><span class="small muted">Продукты, группы и примерный объём порции.</span></span></li>
+          <li><span><b>Вы проверяете и сохраняете</b><br><span class="small muted">Ничего не записывается без вашего подтверждения.</span></span></li></ol>
+        <div class="row" style="margin-top:14px"><button class="btn btn-primary grow" type="button" disabled>${ico('camera')}Открыть камеру</button><button class="btn btn-secondary grow" type="button" data-act="new-meal">${ico('add')}Ввести вручную</button></div>
+        <p class="tiny muted" style="margin:10px 0 0">Распознавание появится в полной версии после подключения сервера и модели ИИ. Сейчас фото не делается и никуда не отправляется — результат не имитируется.</p></div>
+      <section class="section" aria-labelledby="soon-h"><h2 class="h2" id="soon-h" style="margin-bottom:10px">Скоро в приложении</h2>
+        <div class="soon-grid">${SOON.map(([i, t, n, d]) => `<div class="soon-tile"><span class="ri-icon t-${t}">${ico(i, '')}</span><b>${n}<span class="badge-soon">скоро</span></b><p>${d}</p></div>`).join('')}</div></section>`;
+    return { title: 'Фото еды · ИИ', main };
+  };
+
   screens.method = () => {
     const main = `${backLink('today', 'Сегодня')}${pageHead('Как это работает', 'Одно посильное изменение', 'Приложение помогает выбрать доступное действие до еды, а затем спокойно записать, как получилось.')}${limitedNote()}
       ${limited() ? '<p>В вашем режиме приложение не предлагает менять питание или нагрузку. Доступны нейтральный дневник и привычки; изменения обсудите с врачом.</p>' : `<ul class="benefits">
@@ -891,7 +979,8 @@
       <li>${ico('cake')}<div><b>Сладкое допускается</b><p>Один из вариантов — десерт после основной еды. Если нужен перекус сейчас, не нужно терпеть голод ради отметки.</p></div></li>
       <li>${ico('bowl')}<div><b>Углеводы с сопровождением</b><p>Клетчатка, белок или жир могут дополнить хлеб, крупу или фрукт. Нет списка «плохих» блюд.</p></div></li>
       <li>${ico('walk')}<div><b>Движение по возможности</b><p>После еды можно выбрать доступную активность. Таймер считает время; движение подтверждаете вы, отдельно от оценки блюда.</p></div></li></ul>`}
-      <p class="note">Общие советы по образу жизни, без лечебных обещаний и гарантии похудения. Все приёмы сразу выполнять не требуется. Калории — дополнительная информация без штрафов; цифры можно убрать в настройках.</p><a class="btn btn-primary" href="#today">К сегодняшнему дню</a>`;
+      <p class="note">Общие советы по образу жизни, без лечебных обещаний и гарантии похудения. Все приёмы сразу выполнять не требуется. Калории — дополнительная информация без штрафов; цифры можно убрать в настройках.</p><a class="btn btn-primary" href="#today">К сегодняшнему дню</a>
+      <section class="section">${creditsHtml()}</section>`;
     return { title: 'Как это работает', main };
   };
   screens.settings = () => {
@@ -911,7 +1000,8 @@
         <div class="row"><button class="btn btn-secondary btn-sm" type="button" data-act="export" data-arg="csv">${ico('download')}Экспорт CSV</button><button class="btn btn-secondary btn-sm" type="button" data-act="export" data-arg="json">${ico('download')}Экспорт JSON</button>
         <button class="btn btn-ghost btn-sm" type="button" data-act="wipe">${ico('trash')}Удалить мои записи</button></div></section>
       <section class="section"><h2 class="h2" style="margin-bottom:6px">Подписка</h2><a class="btn btn-secondary btn-sm" href="#plus">${ico('plus')}Ритм Плюс — пример экрана</a></section>
-      <section class="section"><h2 class="h2" style="margin-bottom:6px">О приложении</h2><a class="btn btn-secondary" href="#method">Как работает подход</a><button class="btn btn-ghost btn-sm" type="button" data-act="about">Что работает, а что нет</button></section>`;
+      <section class="section"><h2 class="h2" style="margin-bottom:6px">О приложении</h2><div class="row"><a class="btn btn-secondary" href="#method">Как работает подход</a><button class="btn btn-secondary" type="button" data-guide-open>${ico('spark')}Знакомство с Ритмиком</button><a class="btn btn-secondary" href="#scan">${ico('camera')}Скоро в приложении</a></div><button class="btn btn-ghost btn-sm" type="button" data-act="about">Что работает, а что нет</button></section>
+      <section class="section">${creditsHtml()}</section>`;
     return { title: 'Настройки', main };
   };
 
@@ -1019,6 +1109,7 @@
       <p><b>Работает в этой вкладке:</b> онбординг и ограниченный режим, дневник с поиском, избранным, повтором, копированием и отменой удаления, сборка с правилами, сценарии первого приёма, перекуса и ресторана, план с идеями и списком покупок, привычки, таймер с вашим подтверждением, вода, вес и замеры, темы, режим без цифр, экспорт файлом.</p>
       <p><b>Не подключено:</b> аккаунт, синхронизация, уведомления, Health и шаги, фото и голосовой ИИ, штрихкод, базы продуктов, оплата, аналитика. Сетевых запросов нет.</p>
       <p><b>Данные:</b> продукты и идеи — примеры прототипа; калории в них неизвестны. Всё пропадает после перезагрузки.</p>
+      <p class="small muted">Создатель — Малхасян Андраник Мартунович. Медицинское сопровождение — врач Авагян Шакро Норикович.</p>
       <div class="dialog-actions"><button class="btn btn-secondary" type="button" data-review-open>Служебное меню экранов</button><button class="btn btn-primary" type="button" data-act="close">Понятно</button></div>`),
     close: () => closeDialog(),
     skip: (a, el, e) => { e.preventDefault(); $('main').focus(); },
@@ -1323,7 +1414,7 @@
     'measure-add': () => {
       const cm = parseNum($('m-cm').value), date = $('m-date').value || TODAY;
       if (cm == null || cm < 10 || cm > 300) { toast('Введите от 10 до 300 см'); $('m-cm').focus(); return; }
-      const m = { id: uid('cm'), kind: $('m-kind').value, cm, date };
+      const m = { id: uid('cm'), kind: $('m-kind').value, cm, date, created: Date.now() };
       state.measures.push(m); render({ flip: true, appear: m.id });
       toast('Замер записан', { label: 'Отменить', fn: () => { state.measures = state.measures.filter(x => x.id !== m.id); render(); } });
     },
@@ -1413,9 +1504,10 @@
     [[-9, 82.1], [-7, 81.9], [-5, 82.0], [-3, 81.7], [-1, 81.6]].forEach(([d, kg]) => state.weights.push({ id: uid('kg'), demo: true, date: addDays(TODAY, d), kg, created: Date.now() }));
     (state.plan[TODAY] = []).push({ id: uid('p'), slot: 'dinner', ideaId: 'fish-zucchini' });
     state.water.push({ id: uid('w'), date: TODAY, ml: 250 });
+    [['Талия', 88], ['Бёдра', 102], ['Грудь', 98]].forEach(([kind, cm]) => state.measures.push({ id: uid('cm'), demo: true, kind, cm, date: addDays(TODAY, -2), created: Date.now() }));
     go('today');
   }
-  window.RitmApp = { go, reset, loadDemo, ROUTES, applyTheme, toast, get onboarded() { return state.onboarded; }, get route() { return state.route; } };
+  window.RitmApp = { go, reset, loadDemo, ROUTES, applyTheme, toast, heroSvg, get onboarded() { return state.onboarded; }, get route() { return state.route; } };
 
   applyTheme();
   route();
